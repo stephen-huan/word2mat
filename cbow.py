@@ -19,6 +19,8 @@ from torch import ByteTensor as BT
 from torch.autograd import Variable
 
 sent_tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
+# ENCODING = "utf-8"
+ENCODING = "cp437"
 
 def recursive_file_list(path):
     """
@@ -205,14 +207,14 @@ class CBOWDataset(Dataset):
         is empty.
         """
         for i in range(self.num_chunks):
-            with open(self._get_chunk_file_name(i), "r", encoding='cp437') as f:
+            with open(self._get_chunk_file_name(i), "r", encoding=ENCODING) as f:
                 lines = f.readlines()
                 if(len(lines) == 0):
                     raise Exception("Chunk ", i, " is empty\n")
 
     def _create_chunk_files(self, texts_generator):
         cur_chunk_number = 0
-        cur_chunk_file = open(self._get_chunk_file_name(cur_chunk_number), "w", encoding='cp437')
+        cur_chunk_file = open(self._get_chunk_file_name(cur_chunk_number), "w", encoding=ENCODING)
         cur_idx = 0
         last_chunk_size = self.num_texts - (self.num_texts_per_chunk*(self.num_chunks-1))
         for text in texts_generator:
@@ -223,7 +225,7 @@ class CBOWDataset(Dataset):
                 cur_chunk_file.close()
                 cur_idx = 0  # index within the chunk
                 cur_chunk_number += 1
-                cur_chunk_file = open(self._get_chunk_file_name(cur_chunk_number), "w", encoding='cp437')
+                cur_chunk_file = open(self._get_chunk_file_name(cur_chunk_number), "w", encoding=ENCODING)
             else:
                 cur_idx += 1
         cur_chunk_file.close()
@@ -237,7 +239,7 @@ class CBOWDataset(Dataset):
     def _load_text(self, idx):
         chunk_number = math.floor(idx / (1.0*self.num_texts_per_chunk))
         idx_in_chunk = idx % self.num_texts_per_chunk
-        with open(self._get_chunk_file_name(chunk_number), "r", encoding='cp437') as f:
+        with open(self._get_chunk_file_name(chunk_number), "r", encoding=ENCODING) as f:
             for i, line in enumerate(f):
                 if i == idx_in_chunk:
                     return line.strip()
@@ -318,10 +320,10 @@ def _load_texts(path, num_docs):
     filename_list = recursive_file_list(path)
 
     for filename in filename_list:
-        with open(os.path.realpath(filename), 'r', encoding='cp437') as f:
+        with open(os.path.realpath(filename), 'r', encoding=ENCODING) as f:
 
             # change encoding to utf8 to be consistent with other datasets
-            #list(f).decode("ISO-8859-1").encode("cp437")
+            #list(f).decode("ISO-8859-1").encode(ENCODING)
             for line in f:
                 line = line.strip()
                 texts.append(line)
@@ -335,10 +337,10 @@ def _generate_texts(path, num_docs):
     filename_list = recursive_file_list(path)
 
     for filename in filename_list:
-        with open(os.path.realpath(filename), "r", encoding='cp437') as f:
+        with open(os.path.realpath(filename), "r", encoding=ENCODING) as f:
 
             # change encoding to utf8 to be consistent with other datasets
-            #list(f).decode("ISO-8859-1").encode("cp437")
+            #list(f).decode("ISO-8859-1").encode(ENCODING)
             for i, line in enumerate(f):
                 line = line.strip()
                 if num_docs is not None and i > num_docs - 1:
