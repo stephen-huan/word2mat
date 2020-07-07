@@ -50,9 +50,9 @@ def run_experiment(params):
     # build training and test corpus
     filename_list = recursive_file_list(dataset_path)
     print('Use the following files for training: ', filename_list)
-    corpus = CBOWDataset(dataset_path, params.num_docs, params.context_size, 
+    corpus = CBOWDataset(dataset_path, params.num_docs, params.context_size,
                          params.num_samples_per_item, params.mode,
-                         params.precomputed_word_vocab, params.max_words, 
+                         params.precomputed_word_vocab, params.max_words,
                          None, 1000, params.precomputed_chunks_dir, params.temp_path)
     corpus_len = len(corpus)
 
@@ -85,8 +85,8 @@ def run_experiment(params):
     # build encoder
     n_words = len(word_vec)
     if params.w2m_type == "cmow":
-        encoder = get_cmow_encoder(n_words, padding_idx = 0, 
-                                 word_emb_dim = params.word_emb_dim, 
+        encoder = get_cmow_encoder(n_words, padding_idx = 0,
+                                 word_emb_dim = params.word_emb_dim,
                                  initialization_strategy = params.initialization)
         output_embedding_size = params.word_emb_dim
     elif params.w2m_type == "cbow":
@@ -99,7 +99,7 @@ def run_experiment(params):
         output_embedding_size = 2 * params.word_emb_dim
 
     # build cbow model
-    cbow_net = CBOWNet(encoder, output_embedding_size, n_words, 
+    cbow_net = CBOWNet(encoder, output_embedding_size, n_words,
                        weights = unigram_dist, n_negs = params.n_negs, padding_idx = 0)
     if torch.cuda.device_count() > 1:
         print("Using", torch.cuda.device_count(), "GPUs for training!")
@@ -209,21 +209,21 @@ def run_experiment(params):
             percentage_done = float(processed_training_samples) / num_training_samples
             processed_batches += 1
             if processed_batches == params.validation_frequency:
-    
+
                 # compute validation loss and train loss
                 val_loss = round(validate(cbow_test_loader), 5) if num_val_samples > 0 else float('inf')
                 train_loss = round(np.mean(all_costs), 5)
 
                 # print current loss and processing speed
                 logs.append('Epoch {3} - {4:.4} ; lr {2:.4} ; train-loss {0} ; val-loss {5} ; sentence/s {1}'.format(train_loss, int((processed_training_samples - last_processed_training_samples) / (time.time() - last_time)), optimizer.param_groups[0]['lr'], epoch, percentage_done, val_loss))
-                if params.VERBOSE: 
+                if params.VERBOSE:
                     print('\n\n\n')
                 print(logs[-1])
                 last_time = time.time()
                 words_count = 0
                 all_costs = []
                 last_processed_training_samples = processed_training_samples
-                
+
                 if params.VERBOSE:
                     print("100 Batches took {} microseconds".format(total_time))
                     print("get_batch: {} \nforward: {} \nbackward: {} \nstep: {}".format(total_batch_generation_time / total_time, total_forward_time / total_time, total_backward_time / total_time, total_step_time / total_time))
@@ -253,18 +253,18 @@ def run_experiment(params):
                         no_improvement += 1
                         if no_improvement > params.patience:
                             stop_training = True
-                            print("No improvement in loss criterion", str(params.stop_criterion), 
+                            print("No improvement in loss criterion", str(params.stop_criterion),
                                   "for", str(no_improvement), "steps. Terminate training.")
                             break
 
-            now = time.time() 
+            now = time.time()
             batch_time_micro = (now - start_time) * 1000000
 
             total_time = total_time + batch_time_micro
             total_batch_generation_time += batch_generation_time
             total_forward_time += forward_total
             total_backward_time += backward_total
-            
+
             start_time = now
 
 
@@ -321,7 +321,7 @@ def get_params_parser():
                          Set to 0 to not use validation set based saving of intermediate models.")
     parser.add_argument("--stop_criterion", type=str, default=None, help="Which loss to use as stopping criterion.", choices = ['val_loss', 'train_loss'])
     parser.add_argument("--patience", type=int, default=3, help="How many validation steps to make before terminating training.")
-    parser.add_argument("--VERBOSE", action="store_true", default=False, help="Whether to print additional info on speed of processing.")
+    parser.add_argument("--VERBOSE", action="store_true", default=True, help="Whether to print additional info on speed of processing.")
     parser.add_argument("--num_workers", type=int, default=10, help="How many worker threads to use for creating the samples from the dataset.")
 
     # Word2Mat specific
@@ -344,7 +344,7 @@ def get_params_parser():
     return parser
 
 def prepare(params_senteval, samples):
-    
+
     params = params_senteval["cmd_params"]
     outputmodelname = construct_model_name(params.outputmodelname, params)
 
@@ -366,7 +366,7 @@ def _batcher_helper(params, batch):
 def batcher_cbow(params_senteval, batch):
 
     params = params_senteval["cmd_params"]
-    embeddings = _batcher_helper(params_senteval, batch)    
+    embeddings = _batcher_helper(params_senteval, batch)
     return embeddings
 
 if __name__ == "__main__":
