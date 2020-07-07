@@ -57,7 +57,7 @@ def get_index_batch(batch, word_vec):
     for sen in batch:
         clean_batch.append([w for w in sen if w in word_vec])
     batch = clean_batch
-    
+
     lengths = np.array([len(x) for x in batch])
     max_len = np.max(lengths)
     embed = np.zeros((max_len, len(batch)))
@@ -157,8 +157,8 @@ class CBOWDataset(Dataset):
         if precomputed_word_vocab:
             word_vec = pickle.load(open(os.path.join(precomputed_word_vocab), "rb" ))
         else:
-            
-            word_vec = build_vocab(texts_generator, 
+
+            word_vec = build_vocab(texts_generator,
                                    pretrained_embeddings = pretrained_embeddings,
                                    max_words = max_words)
 
@@ -201,29 +201,29 @@ class CBOWDataset(Dataset):
         return text_lengths
 
     def _check_chunk_files(self):
-        """Raises an exception if any of the chunks generated 
+        """Raises an exception if any of the chunks generated
         is empty.
         """
         for i in range(self.num_chunks):
-            with open(self._get_chunk_file_name(i), "r") as f:
+            with open(self._get_chunk_file_name(i), "r", encoding='cp437') as f:
                 lines = f.readlines()
                 if(len(lines) == 0):
                     raise Exception("Chunk ", i, " is empty\n")
 
     def _create_chunk_files(self, texts_generator):
         cur_chunk_number = 0
-        cur_chunk_file = open(self._get_chunk_file_name(cur_chunk_number), "w")
+        cur_chunk_file = open(self._get_chunk_file_name(cur_chunk_number), "w", encoding='cp437')
         cur_idx = 0
         last_chunk_size = self.num_texts - (self.num_texts_per_chunk*(self.num_chunks-1))
         for text in texts_generator:
             print(text, file=cur_chunk_file)
-            if cur_idx == self.num_texts_per_chunk - 1 or (cur_idx == last_chunk_size-1 and 
+            if cur_idx == self.num_texts_per_chunk - 1 or (cur_idx == last_chunk_size-1 and
                     cur_chunk_number == self.num_chunks-1):
                 # start next chunk
                 cur_chunk_file.close()
                 cur_idx = 0  # index within the chunk
                 cur_chunk_number += 1
-                cur_chunk_file = open(self._get_chunk_file_name(cur_chunk_number), "w")
+                cur_chunk_file = open(self._get_chunk_file_name(cur_chunk_number), "w", encoding='cp437')
             else:
                 cur_idx += 1
         cur_chunk_file.close()
@@ -237,7 +237,7 @@ class CBOWDataset(Dataset):
     def _load_text(self, idx):
         chunk_number = math.floor(idx / (1.0*self.num_texts_per_chunk))
         idx_in_chunk = idx % self.num_texts_per_chunk
-        with open(self._get_chunk_file_name(chunk_number), "r") as f:
+        with open(self._get_chunk_file_name(chunk_number), "r", encoding='cp437') as f:
             for i, line in enumerate(f):
                 if i == idx_in_chunk:
                     return line.strip()
@@ -248,7 +248,7 @@ class CBOWDataset(Dataset):
         idx_to_text_word_tuple = {}
         idx = 0
         for i, text in enumerate(self.texts):
-            
+
             for j in range(self.text_lengths[i]):
                 idx_to_text_word_tuple.update({idx : (i, j)})
                 idx += 1
@@ -316,12 +316,12 @@ class CBOWDataset(Dataset):
 def _load_texts(path, num_docs):
     texts = []
     filename_list = recursive_file_list(path)
-    
+
     for filename in filename_list:
-        with open(os.path.realpath(filename), 'r') as f:
+        with open(os.path.realpath(filename), 'r', encoding='cp437') as f:
 
             # change encoding to utf8 to be consistent with other datasets
-            #cur_text.decode("ISO-8859-1").encode("utf-8")
+            #list(f).decode("ISO-8859-1").encode("cp437")
             for line in f:
                 line = line.strip()
                 texts.append(line)
@@ -335,10 +335,10 @@ def _generate_texts(path, num_docs):
     filename_list = recursive_file_list(path)
 
     for filename in filename_list:
-        with open(os.path.realpath(filename), "r") as f:
+        with open(os.path.realpath(filename), "r", encoding='cp437') as f:
 
             # change encoding to utf8 to be consistent with other datasets
-            # cur_text.decode("ISO-8859-1").encode("utf-8")
+            #list(f).decode("ISO-8859-1").encode("cp437")
             for i, line in enumerate(f):
                 line = line.strip()
                 if num_docs is not None and i > num_docs - 1:
@@ -367,13 +367,13 @@ class CBOWNet(nn.Module):
         embedding = self.encoder(input_s)
         batch_size = embedding.size()[0]
         emb_size = embedding.size()[1]
-        
+
         # draw negative samples
         if self.weights is not None:
             nwords = torch.multinomial(self.weights, batch_size * self.n_negs, replacement=True).view(batch_size, -1)
         else:
             nwords = FT(batch_size, self.n_negs).uniform_(0, self.vocab_size).long()
-        nwords = Variable(torch.LongTensor(nwords), requires_grad=False).cuda()       
+        nwords = Variable(torch.LongTensor(nwords), requires_grad=False).cuda()
 
         # lookup the embeddings of output words
         missing_word_vector = self.outputembeddings(missing_word)
@@ -387,7 +387,7 @@ class CBOWNet(nn.Module):
         ## add epsilon to prediction to avoid numerical instabilities
         oloss = self._add_epsilon(oloss)
         oloss = oloss.log()
-        
+
         # compute loss for negative samples
         nloss = torch.bmm(nvectors, embedding.view(batch_size, -1, 1)).squeeze().sigmoid()
 
@@ -405,4 +405,3 @@ class CBOWNet(nn.Module):
     def encode(self, s1):
         emb = self.encoder(s1)
         return emb
-
