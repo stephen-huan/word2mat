@@ -1,0 +1,3 @@
+[submodule "nlp-recipes"]
+	path = nlp-recipes
+	url = https://github.com/microsoft/nlp-recipes
