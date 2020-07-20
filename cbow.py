@@ -348,7 +348,7 @@ def _generate_texts(path, num_docs):
                 yield line
 
 class CBOWNet(nn.Module):
-    def __init__(self, encoder, output_embedding_size, output_vocab_size, weights = None, n_negs = 20, padding_idx = 0):
+    def __init__(self, encoder, output_embedding_size, output_vocab_size, weights = None, n_negs = 20, padding_idx = 0, use_cuda=True):
         super(CBOWNet, self).__init__()
 
         self.encoder = encoder
@@ -356,6 +356,7 @@ class CBOWNet(nn.Module):
         self.weights = weights
         self.output_vocab_size = output_vocab_size
         self.output_embedding_size = output_embedding_size
+        self.use_cuda = use_cuda
 
         self.outputembeddings = nn.Embedding(output_vocab_size + 1, output_embedding_size, padding_idx=0)
 
@@ -375,7 +376,11 @@ class CBOWNet(nn.Module):
             nwords = torch.multinomial(self.weights, batch_size * self.n_negs, replacement=True).view(batch_size, -1)
         else:
             nwords = FT(batch_size, self.n_negs).uniform_(0, self.vocab_size).long()
-        nwords = Variable(torch.LongTensor(nwords), requires_grad=False).cuda()
+
+        if self.use_cuda:
+            nwords = Variable(torch.LongTensor(nwords), requires_grad=False).cuda()
+        else:
+            nwords = Variable(torch.LongTensor(nwords), requires_grad=False)
 
         # lookup the embeddings of output words
         missing_word_vector = self.outputembeddings(missing_word)

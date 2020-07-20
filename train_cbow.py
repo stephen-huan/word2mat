@@ -35,6 +35,10 @@ def run_experiment(params):
     print('\ntogrep : {0}\n'.format(sys.argv[1:]))
     print(params)
 
+    # set whether to use cuda
+    global CUDA 
+    CUDA = not params.no_cuda
+
     """
     SEED
     """
@@ -100,7 +104,7 @@ def run_experiment(params):
 
     # build cbow model
     cbow_net = CBOWNet(encoder, output_embedding_size, n_words,
-                       weights = unigram_dist, n_negs = params.n_negs, padding_idx = 0)
+                       weights = unigram_dist, n_negs = params.n_negs, padding_idx = 0, use_cuda=CUDA)
     if torch.cuda.device_count() > 1:
         print("Using", torch.cuda.device_count(), "GPUs for training!")
         # dim = 0 [30, xxx] -> [10, ...], [10, ...], [10, ...] on 3 GPUs
@@ -115,7 +119,8 @@ def run_experiment(params):
     optimizer = optim_fn(cbow_net.parameters(), **optim_params)
 
     # cuda by default
-    cbow_net.cuda()
+    if CUDA:
+        cbow_net.cuda()
 
     """
     TRAIN
@@ -132,8 +137,13 @@ def run_experiment(params):
 
     def forward_pass(X_batch, tgt_batch, params, check_size = False):
 
-        X_batch = Variable(X_batch).cuda()
-        tgt_batch = Variable(torch.LongTensor(tgt_batch)).cuda()
+
+        if CUDA:
+            X_batch = Variable(X_batch).cuda()
+            tgt_batch = Variable(torch.LongTensor(tgt_batch)).cuda()
+        else:
+            X_batch = Variable(X_batch)
+            tgt_batch = Variable(torch.LongTensor(tgt_batch))
         k = X_batch.size(0)  # actual batch size
 
         loss = cbow_net(X_batch, tgt_batch).mean()
@@ -341,6 +351,9 @@ def get_params_parser():
     parser.add_argument("--mode", type=str, help="Determines the mode of the prediction task, i.e., which word is to be removed from a given window of words. Options are 'cbow' (remove middle word) and 'random' (a random word from the window is removed).", default='random', choices = ['cbow', 'random'])
     parser.add_argument("--n_negs", type=int, default=5, help="How many negative samples to use for training (the larger the dataset, the fewer are required (5).")
 
+    # additions
+    parser.add_argument("--no_cuda", action="store_true", default=False, help="Whether to disable cuda.")
+
     return parser
 
 def prepare(params_senteval, samples):
@@ -356,7 +369,10 @@ def prepare(params_senteval, samples):
 
 def _batcher_helper(params, batch):
     sent, _ = get_index_batch(batch, params.vocabulary)
-    sent_cuda = Variable(sent.cuda())
+    if CUDA:
+        sent_cuda = Variable(sent.cuda())
+    else:
+        sent_cuda = Variable(sent)
     sent_cuda = sent_cuda.t()
     params.word2mat.eval() # Deactivate drop-out and such
     embeddings = params.word2mat.forward(sent_cuda).data.cpu().numpy()

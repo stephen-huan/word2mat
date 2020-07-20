@@ -16,8 +16,8 @@ from mutils import run_hyperparameter_optimization, write_to_csv
 from warnings import warn
 
 # Set PATHs to SentEval
-PATH_SENTEVAL = r'D:\Documents\scripts\assip2020\assip-2020\word2mat\nlp-recipes\utils_nlp\eval'
-PATH_TO_DATA = r"D:\Documents\scripts\assip2020\assip-2020\word2mat\nlp-recipes\utils_nlp\eval\SentEval\data"
+PATH_SENTEVAL = "SentEval" 
+PATH_TO_DATA = "SentEval/data" 
 assert os.path.exists(PATH_SENTEVAL) and os.path.exists(PATH_TO_DATA), "Set path to SentEval + data correctly!"
 # import senteval
 sys.path.insert(0, PATH_SENTEVAL)
@@ -102,18 +102,20 @@ def _save_embeddings_to_word2vec(encoder, outputmodelname, params):
     return output_path
 
 def _evaluate_downstream_and_probing_tasks(encoder, params, batcher, prepare):
+    cuda = not params.no_cuda 
+
     # define senteval params
     eval_type = sys.argv[1] if len(sys.argv) > 1 else ""
     if params.downstream_eval == "full":
 
         ## for comparable evaluation (as in literature)
-        params_senteval = {'task_path': PATH_TO_DATA, 'usepytorch': True, 'kfold': 10}
+        params_senteval = {'task_path': PATH_TO_DATA, 'usepytorch': cuda, 'kfold': 10}
         params_senteval['classifier'] = {'nhid': params.nhid, 'optim': 'adam', 'batch_size': 64,
                                          'tenacity': 5, 'epoch_size': 4}
 
     elif params.downstream_eval == "test":
         ## for testing purpose
-        params_senteval = {'task_path': PATH_TO_DATA, 'usepytorch': True, 'kfold': 5}
+        params_senteval = {'task_path': PATH_TO_DATA, 'usepytorch': cuda, 'kfold': 5}
         params_senteval['classifier'] = {'nhid': params.nhid, 'optim': 'rmsprop', 'batch_size': 128,
                                  'tenacity': 3, 'epoch_size': 2}
     else:
