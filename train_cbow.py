@@ -102,9 +102,20 @@ def run_experiment(params):
                                  initialization_strategy = params.initialization)
         output_embedding_size = 2 * params.word_emb_dim
 
-    # build cbow model
-    cbow_net = CBOWNet(encoder, output_embedding_size, n_words,
-                       weights = unigram_dist, n_negs = params.n_negs, padding_idx = 0, use_cuda=CUDA)
+    if params.load_model is not None:
+        # load cbow model from existing file
+        cbow_net = torch.load(params.load_model)
+        # assume epoch is last in the name
+        try:
+            epoch_offest = int(params.load_model.split("_")[-1])
+        except ValueError:
+            epoch_offest = 0
+    else:
+        # build cbow model
+        cbow_net = CBOWNet(encoder, output_embedding_size, n_words,
+                        weights = unigram_dist, n_negs = params.n_negs, padding_idx = 0, use_cuda=CUDA)
+        epoch_offest = 0
+
     if torch.cuda.device_count() > 1:
         print("Using", torch.cuda.device_count(), "GPUs for training!")
         # dim = 0 [30, xxx] -> [10, ...], [10, ...], [10, ...] on 3 GPUs
@@ -121,7 +132,7 @@ def run_experiment(params):
     # cuda by default
     if CUDA:
         cbow_net.cuda()
-
+    
     """
     TRAIN
     """
@@ -162,6 +173,7 @@ def run_experiment(params):
         cbow_net.train()
         return np.mean(all_costs)
 
+    last_epoch = 1
     def trainepoch(epoch):
         print('\nTRAINING : Epoch ' + str(epoch))
         cbow_net.train()
@@ -186,7 +198,14 @@ def run_experiment(params):
         total_step_time = 0
         last_processed_training_samples = 0
 
-        nonlocal processed_batches, stop_training, no_improvement, min_val_loss, losses, min_loss_criterion
+        nonlocal processed_batches, stop_training, no_improvement, min_val_loss, losses, min_loss_criterion, last_epoch
+        # save model every few epoch
+        offset = epoch + epoch_offest
+        if last_epoch != offset: 
+            last_epoch = offset
+            if last_epoch % params.epoch_size == 0:
+                torch.save(cbow_net, os.path.join(params.outputdir, outputmodelname + f".cbow_net_{offset}"))
+
         for i, (X_batch, tgt_batch) in enumerate(cbow_train_loader):
 
             batch_generation_time = (time.time() - start_time) * 1000000
@@ -235,8 +254,11 @@ def run_experiment(params):
                 last_processed_training_samples = processed_training_samples
 
                 if params.VERBOSE:
-                    print("100 Batches took {} microseconds".format(total_time))
-                    print("get_batch: {} \nforward: {} \nbackward: {} \nstep: {}".format(total_batch_generation_time / total_time, total_forward_time / total_time, total_backward_time / total_time, total_step_time / total_time))
+                    try:
+                        print("100 Batches took {} microseconds".format(total_time))
+                        print("get_batch: {} \nforward: {} \nbackward: {} \nstep: {}".format(total_batch_generation_time / total_time, total_forward_time / total_time, total_backward_time / total_time, total_step_time / total_time))
+                    except ZeroDivisionError:
+                        print("Batch took no time!")
                 total_time = 0
                 total_batch_generation_time = 0
                 total_forward_time = 0
@@ -353,6 +375,8 @@ def get_params_parser():
 
     # additions
     parser.add_argument("--no_cuda", action="store_true", default=False, help="Whether to disable cuda.")
+    parser.add_argument("--epoch_size", type=int, default=10, help="How many epochs to wait until saving a new model.")
+    parser.add_argument("--load_model", type=str, default=None, help="Path to a pretrained model file to load for additional training.")
 
     return parser
 
