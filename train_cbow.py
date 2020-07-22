@@ -107,6 +107,9 @@ def run_experiment(params):
     if params.load_model is not None:
         # load cbow model from existing file
         cbow_net = torch.load(params.load_model)
+        # wrapped in nn.DataParallel class
+        if not isinstance(cbow_net, CBOWNet):
+            cbow_net = cbow_net.module
         # assume epoch is last in the name
         try:
             epoch_offest = int(params.load_model.split("_")[-1])
