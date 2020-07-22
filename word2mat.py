@@ -15,7 +15,7 @@ TINY = 1e-11
 
 class Word2MatEncoder(nn.Module):
 
-    def __init__(self, n_words, word_emb_dim = 784, padding_idx = 0, w2m_type = "cbow", initialization_strategy = "identity"):
+    def __init__(self, n_words, word_emb_dim = 784, padding_idx = 0, w2m_type = "cbow", initialization_strategy = "identity", nonlinear=False):
         """
         TODO: Method description for w2m encoder.
         """
@@ -24,6 +24,7 @@ class Word2MatEncoder(nn.Module):
         self.n_words = n_words
         self.w2m_type = w2m_type
         self.initialization_strategy = initialization_strategy
+        self.nonlinear = nonlinear
 
         # check that the word embedding size is a square
         assert word_emb_dim == int(math.sqrt(word_emb_dim)) ** 2
@@ -105,6 +106,8 @@ class Word2MatEncoder(nn.Module):
         cur_emb = word_matrices[:, 0, :]
         for i in range(1, word_matrices.size()[1]):
             cur_emb = torch.bmm(cur_emb, word_matrices[:, i, :])
+            if self.nonlinear:
+                cur_emb = nn.functional.relu_(cur_emb)
         return cur_emb
 
     def _flatten_matrix(self, m):
@@ -148,10 +151,11 @@ class HybridEncoder(nn.Module):
         return torch.cat([self.cbow_encoder(sent_tuple), self.cmow_encoder(sent_tuple)], dim = 1)
 
 
-def get_cmow_encoder(n_words, padding_idx = 0, word_emb_dim = 784, initialization_strategy = "identity"):
+def get_cmow_encoder(n_words, padding_idx = 0, word_emb_dim = 784, initialization_strategy = "identity", nonlinear=False):
     encoder = Word2MatEncoder(n_words, word_emb_dim = word_emb_dim, 
                               padding_idx = padding_idx, w2m_type = "cmow", 
-                              initialization_strategy = initialization_strategy)
+                              initialization_strategy = initialization_strategy,
+                              nonlinear = nonlinear)
     return encoder
 
 def get_cbow_encoder(n_words, padding_idx = 0, word_emb_dim = 784):
@@ -159,11 +163,12 @@ def get_cbow_encoder(n_words, padding_idx = 0, word_emb_dim = 784):
                               padding_idx = padding_idx, w2m_type = "cbow")
     return encoder
 
-def get_cbow_cmow_hybrid_encoder(n_words, padding_idx = 0, word_emb_dim = 400, initialization_strategy = "identity"):
+def get_cbow_cmow_hybrid_encoder(n_words, padding_idx = 0, word_emb_dim = 400, initialization_strategy = "identity", nonlinear=False):
     cbow_encoder = get_cbow_encoder(n_words, padding_idx = padding_idx, word_emb_dim = word_emb_dim)
     cmow_encoder = get_cmow_encoder(n_words, padding_idx = word_emb_dim,
                                    word_emb_dim = word_emb_dim, 
-                                   initialization_strategy = initialization_strategy)
+                                   initialization_strategy = initialization_strategy,
+                                   nonlinear = nonlinear)
 
     encoder = HybridEncoder(cbow_encoder, cmow_encoder)
     return encoder

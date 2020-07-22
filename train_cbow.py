@@ -91,7 +91,8 @@ def run_experiment(params):
     if params.w2m_type == "cmow":
         encoder = get_cmow_encoder(n_words, padding_idx = 0,
                                  word_emb_dim = params.word_emb_dim,
-                                 initialization_strategy = params.initialization)
+                                 initialization_strategy = params.initialization,
+                                 nonlinear = params.nonlinear)
         output_embedding_size = params.word_emb_dim
     elif params.w2m_type == "cbow":
         encoder = get_cbow_encoder(n_words, padding_idx = 0, word_emb_dim = params.word_emb_dim)
@@ -99,7 +100,8 @@ def run_experiment(params):
     elif params.w2m_type == "hybrid":
         encoder = get_cbow_cmow_hybrid_encoder(n_words, padding_idx = 0,
                                  word_emb_dim = params.word_emb_dim,
-                                 initialization_strategy = params.initialization)
+                                 initialization_strategy = params.initialization,
+                                 nonlinear = params.nonlinear)
         output_embedding_size = 2 * params.word_emb_dim
 
     if params.load_model is not None:
@@ -377,6 +379,7 @@ def get_params_parser():
     parser.add_argument("--no_cuda", action="store_true", default=False, help="Whether to disable cuda.")
     parser.add_argument("--epoch_size", type=int, default=10, help="How many epochs to wait until saving a new model.")
     parser.add_argument("--load_model", type=str, default=None, help="Path to a pretrained model file to load for additional training.")
+    parser.add_argument("--nonlinear", action="store_true", default=False, help="Whether to use a nonlinear activation function.")
 
     return parser
 
